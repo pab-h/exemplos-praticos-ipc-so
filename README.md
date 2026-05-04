@@ -1,0 +1,20 @@
+# Links para as simulações
+
+## grep-error
+
+- C: https://www.programiz.com/online-compiler/7MSgtUTIynFc7
+- Python: https://www.programiz.com/online-compiler/3dIEySfgDhaa5
+
+## cliente-cozinheiro
+
+- C: https://www.programiz.com/online-compiler/7YHZp0Gnhte5m
+- Python: https://www.programiz.com/online-compiler/5J8j3X5sx7bbW
+
+## sensor-dashboard
+
+- C: https://www.programiz.com/online-compiler/7vpKj7RHNabyv
+- Python: https://www.programiz.com/online-compiler/9tLcYUo41MlID
+
+## zapzap
+
+Não há como testar em um simulador online. 
