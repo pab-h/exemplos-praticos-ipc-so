@@ -1,39 +1,43 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
 #include <string.h>
+#include <unistd.h>
+#include <sys/ipc.h>
+#include <sys/msg.h>
 #include <sys/wait.h>
 #include <time.h>
 
-#define MSG_SIZE 100
+#define MAX_TEXT 100
 
-void cliente(int write_fd, int id) {
-    char buffer[MSG_SIZE];
+struct mensagem {
+    long tipo;
+    char texto[MAX_TEXT];
+};
 
-    srand(getpid());
+void cliente(int msgid, int id) {
+    struct mensagem msg;
+    msg.tipo = 1;
 
     for (int i = 0; i < 3; i++) {
-        snprintf(buffer, MSG_SIZE, "Cliente %d pediu item %d", id, i);
-        write(write_fd, buffer, MSG_SIZE);
+        snprintf(msg.texto, MAX_TEXT, "Cliente %d pediu item %d", id, i);
+        msgsnd(msgid, &msg, sizeof(msg.texto), 0);
 
-        usleep((rand() % 1000) * 1000); // sleep aleatório (ms)
+        usleep((rand() % 1000) * 1000);
     }
 
     exit(0);
 }
 
-void cozinheiro(int read_fd) {
-    char buffer[MSG_SIZE];
+void cozinheiro(int msgid) {
+    struct mensagem msg;
 
     while (1) {
-        read(read_fd, buffer, MSG_SIZE);
+        msgrcv(msgid, &msg, sizeof(msg.texto), 0, 0);
 
-        if (strcmp(buffer, "END") == 0)
+        if (strcmp(msg.texto, "FIM") == 0)
             break;
 
-        printf("Preparando: %s\n", buffer);
-        fflush(stdout);
-
+        printf("Preparando: %s\n", msg.texto);
         sleep(1);
     }
 
@@ -41,46 +45,48 @@ void cozinheiro(int read_fd) {
 }
 
 int main() {
-    int pipefd[2];
-    pipe(pipefd);
+    srand(time(NULL));
 
-    int read_fd = pipefd[0];
-    int write_fd = pipefd[1];
+    key_t key = ftok("fila", 65);
+    int msgid = msgget(key, 0666 | IPC_CREAT);
 
-    // cria cozinheiro
-    pid_t coz = fork();
-    if (coz == 0) {
-        close(write_fd); // não escreve
-        cozinheiro(read_fd);
+    if (msgid == -1) {
+        perror("msgget");
+        exit(1);
     }
 
-    // cria clientes
-    pid_t clientes[3];
-    for (int i = 0; i < 3; i++) {
-        clientes[i] = fork();
+    pid_t pid;
 
-        if (clientes[i] == 0) {
-            close(read_fd); // não lê
-            cliente(write_fd, i);
+    // Cozinheiro
+    pid = fork();
+    if (pid == 0) {
+        cozinheiro(msgid);
+    }
+
+    // Clientes
+    for (int i = 0; i < 3; i++) {
+        pid = fork();
+        if (pid == 0) {
+            cliente(msgid, i);
         }
     }
 
-    // processo principal
-    close(read_fd); // não lê
-
-    // espera clientes (join)
+    // Espera clientes
     for (int i = 0; i < 3; i++) {
-        waitpid(clientes[i], NULL, 0);
+        wait(NULL);
     }
 
-    // envia sinal de parada
-    char end_msg[MSG_SIZE] = "END";
-    write(write_fd, end_msg, MSG_SIZE);
+    // Envia mensagem de término
+    struct mensagem fim;
+    fim.tipo = 1;
+    strcpy(fim.texto, "FIM");
 
-    close(write_fd);
+    msgsnd(msgid, &fim, sizeof(fim.texto), 0);
 
-    // espera cozinheiro
-    waitpid(coz, NULL, 0);
+    wait(NULL); // espera cozinheiro
+
+    // Remove fila
+    msgctl(msgid, IPC_RMID, NULL);
 
     return 0;
 }

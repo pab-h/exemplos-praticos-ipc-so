@@ -7,7 +7,7 @@
 
 ## cliente-cozinheiro
 
-- C: https://www.programiz.com/online-compiler/7YHZp0Gnhte5m
+- C: https://www.programiz.com/online-compiler/6jCK0KTeDv863
 - Python: https://www.programiz.com/online-compiler/5J8j3X5sx7bbW
 
 ## sensor-dashboard
